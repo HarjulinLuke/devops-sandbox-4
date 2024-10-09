@@ -13,5 +13,5 @@ jobs:
     uses: HarjulinLuke/devops-sandbox-4/.github/workflows/create-github-release.yml@main
     with:
       tag-prefix: ''
-      create-major-minor: 'true'
-      create-major: 'true'
+      create-major-minor: 'false'
+      create-major: 'false'
