@@ -10,7 +10,7 @@ jobs:
       
   CreateNextRelease:
     name: 'Creating Next Github Release'
-    uses: ./.github/workflows/create-github-release.yml@main
+    uses: HarjulinLuke/devops-sandbox-4/.github/workflows/create-github-release.yml@main
     with:
       tag-prefix: ''
       create-major-minor: 'true'
