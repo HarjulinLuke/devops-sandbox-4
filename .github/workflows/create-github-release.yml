@@ -75,7 +75,9 @@ jobs:
       id: prepare_tagprefix
       shell: pwsh
       run: |
-        "tag-prefix-config=/overrideconfig tag-prefix=${{ inputs.tag-prefix || '' }}" >> $env:GITHUB_OUTPUT
+        if ("${{ inputs.tag-prefix }}" -ne "") {
+          "tag-prefix-config=/overrideconfig tag-prefix=${{ inputs.tag-prefix }}" >> $env:GITHUB_OUTPUT
+        }
 
     - name: Get Next Tag
       id: gitversion
@@ -84,7 +86,7 @@ jobs:
         git-tool-latest: 'true'
         use-config-file: 'true'
         pre-release: 'false'
-        additional-arguments: '/overrideconfig tag-prefix="${{ inputs.tag-prefix }}" /b ${{ github.event.pull_request.head.ref }}'
+        additional-arguments: '${{ steps.prepare_tagprefix.outputs.tag-prefix-config }} /b ${{ github.event.pull_request.head.ref }}'
 
     - name: Get Major Release ID
       id: get_major_release
