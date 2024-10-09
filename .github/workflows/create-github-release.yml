@@ -1,0 +1,172 @@
+name: 'Create New Release'
+
+on:
+  workflow_call:
+    inputs:
+      tag-prefix:
+        description: "Prefix for the tag"
+        required: true
+        type: string
+        default: 'v'
+      create-major-minor:
+          description: "Option to create Major Minor Versioning"
+          required: false
+          type: string
+          default: 'true'
+      create-major:
+          description: "Option to create Major Version"
+          required: false
+          type: string
+          default: 'true'
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: read
+
+jobs:
+  CreateNewReleaseVersion:
+    name: 'Create New Tags'
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged
+    runs-on: 'ubuntu-latest'
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      REPO_OWNER: ${{ github.repository_owner }}
+      REPO_NAME: ${{ github.event.repository.name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get Last Commit SHA of Closed PR
+      id: get-last-commit
+      shell: pwsh
+      run: |
+        # Fetch the list of commits in the PR
+        $commits = @(gh pr view ${{ env.PR_NUMBER }} --json commits -q '.commits[].oid')
+        $lastCommitSha = $commits[$commits.Length-1]
+        Write-Host "Last commit SHA: $lastCommitSha"
+        "lastCommitSha=$lastCommitSha" >> $env:GITHUB_OUTPUT
+
+    - name: 'Create Head Branch of PR'
+      shell: pwsh
+      run: |
+        git fetch --all
+        Write-Host "Local branches:"
+        git branch --list
+        Write-Host "Remote branches:"
+        git branch --list -r
+        if ($null -eq (git branch --list -r origin/${{ github.event.pull_request.head.ref }})) {
+          Write-Host "Re-creating branch ${{ github.event.pull_request.head.ref }}..."
+          gh api repos/${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}/git/refs -X POST -F ref=refs/heads/${{ github.event.pull_request.head.ref }} -F sha=${{ steps.get-last-commit.outputs.lastCommitSha }}
+          git fetch
+          Write-Host "Remote branches:"
+          git branch --list -r
+        }
+        else {
+          Write-Host "Branch ${{ github.event.pull_request.head.ref }} already exists."
+        }
+        Write-Host "Checking out branch ${{ github.event.pull_request.head.ref }}..."
+        git checkout ${{ github.event.pull_request.head.ref }}
+
+    - name: Get Next Tag
+      id: gitversion
+      uses: easyjet-dev/reusable-workflows/.github/actions/git-version@v2
+      with:
+        git-tool-latest: 'true'
+        use-config-file: 'true'
+        pre-release: 'false'
+        additional-arguments: '/b ${{ github.event.pull_request.head.ref }}'
+
+    - name: Get Major Release ID
+      id: get_major_release
+      if: inputs.create-major == 'true'
+      run: |
+        release_id=$(curl -s -X GET -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.Major }}" | jq -r '.id')
+        echo "$release_id"
+        if [ "$release_id" == "null" ]; then
+          echo "release_exists=false" >> $GITHUB_OUTPUT
+        else
+          echo "release_exists=true" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Get MajorMinor Release ID
+      id: get_majorminor_release
+      if: inputs.create-major-minor == 'true'
+      run: |
+        release_id=$(curl -s -X GET -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.Major }}.${{ steps.gitversion.outputs.Minor }}" | jq -r '.id')
+        echo "$release_id"
+        if [ "$release_id" == "null" ]; then
+          echo "release_exists=false" >> $GITHUB_OUTPUT
+        else
+          echo "release_exists=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Update Major Tag
+      shell: 'pwsh'
+      if: steps.get_major_release.outputs.release_exists  == 'true' && inputs.create-major == 'true'
+      run: |
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config user.name "github-actions[bot]"
+        git tag -f ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.Major }} ${{ github.sha }}
+        git push origin -f ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.Major }}
+    
+    - name: Update MajorMinor Tag
+      shell: 'pwsh'
+      if: steps.get_majorminor_release.outputs.release_exists  == 'true' && inputs.create-major-minor == 'true'
+      run: |
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config user.name "github-actions[bot]"
+        git tag -f ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.Major }}.${{ steps.gitversion.outputs.Minor }} ${{ github.sha }}
+        git push origin -f ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.Major }}.${{ steps.gitversion.outputs.Minor }}
+
+    - name: Create Major Release 
+      id: create_major_release
+      if: steps.get_major_release.outputs.release_exists  == 'true' && inputs.create-major == 'true'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: '${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.Major }}'
+        release_name: '${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.Major }}'
+        commitish: '${{ github.sha }}'
+        draft: false
+        prerelease: false
+
+    - name: Create Major Minor Release 
+      id: create_majorminor_release
+      if: steps.get_majorminor_release.outputs.release_exists  == 'true' && inputs.create-major-minor == 'true'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: '${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.Major }}.${{ steps.gitversion.outputs.Minor }}'
+        release_name: '${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.Major }}.${{ steps.gitversion.outputs.Minor }}'
+        commitish: '${{ github.sha }}'
+        draft: false
+        prerelease: false
+
+    - name: Create Version Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: '${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.MajorMinorPatch }}'
+        release_name: '${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.MajorMinorPatch }}'
+        commitish: '${{ github.sha }}'
+        draft: false
+        prerelease: false
+
+    - name: Delete Merged Branch
+      shell: 'pwsh'
+      run: | 
+        if ('${{ github.event.pull_request.head.ref }}' -ne '${{ github.event.repository.default_branch }}') {
+          git push origin --delete ${{ github.event.pull_request.head.ref }}
+        }
