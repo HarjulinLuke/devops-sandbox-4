@@ -73,7 +73,7 @@ jobs:
 
     - name: Get Next Tag
       id: gitversion
-      uses: easyjet-dev/reusable-workflows/.github/actions/git-version@v2
+      uses: HarjulinLuke/devops-sandbox-4/.github/actions/git-version@main
       with:
         git-tool-latest: 'true'
         use-config-file: 'true'
