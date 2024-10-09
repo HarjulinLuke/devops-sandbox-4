@@ -78,7 +78,7 @@ jobs:
         git-tool-latest: 'true'
         use-config-file: 'true'
         pre-release: 'false'
-        additional-arguments: '/b ${{ github.event.pull_request.head.ref }}'
+        additional-arguments: '/overrideconfig tag-prefix=v /b ${{ github.event.pull_request.head.ref }}'
 
     - name: Get Major Release ID
       id: get_major_release
