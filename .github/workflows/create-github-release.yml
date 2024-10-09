@@ -75,9 +75,7 @@ jobs:
       id: prepare_tagprefix
       shell: pwsh
       run: |
-        if ("${{ inputs.tag-prefix }}" -ne "") {
-          "tag-prefix-config=/overrideconfig tag-prefix=${{ inputs.tag-prefix }}" >> $env:GITHUB_OUTPUT
-        }
+        "tag-prefix-config=/overrideconfig tag-prefix=${{ inputs.tag-prefix || '' }}" >> $env:GITHUB_OUTPUT
 
     - name: Get Next Tag
       id: gitversion
