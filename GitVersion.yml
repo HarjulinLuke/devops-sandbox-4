@@ -2,7 +2,6 @@ mode: ContinuousDelivery
 major-version-bump-message: '\+semver:\s?(breaking|major)'
 no-bump-message: '\+semver:\s?(none|skip)'
 commit-message-incrementing: Enabled
-tag-prefix: [vV]
 branches:
   main:
     regex: ^main$
