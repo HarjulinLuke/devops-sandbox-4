@@ -71,13 +71,11 @@ jobs:
         Write-Host "Checking out branch ${{ github.event.pull_request.head.ref }}..."
         git checkout ${{ github.event.pull_request.head.ref }}
 
-    # - name: Prepare gitversion tagprefix
-    #   id: prepare_tagprefix
-    #   shell: pwsh
-    #   run: |
-    #     if ("${{ inputs.tag-prefix }}" -ne "") {
-    #       "tag-prefix-config=/overrideconfig tag-prefix=${{ inputs.tag-prefix }}" >> $env:GITHUB_OUTPUT
-    #     }
+    - name: Prepare gitversion tagprefix
+      id: prepare_tagprefix
+      shell: pwsh
+      run: |
+        "tag-prefix-config=/overrideconfig tag-prefix=${{ inputs.tag-prefix || '' }}" >> $env:GITHUB_OUTPUT
 
     - name: Get Next Tag
       id: gitversion
