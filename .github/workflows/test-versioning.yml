@@ -1,0 +1,31 @@
+name: Test Versioning
+description: Manually trigger gitversion
+
+on:
+  workflow_dispatch
+
+permissions:
+  contents: write
+
+jobs:
+  test-versioning:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v4.1.0
+        with:
+          versionSpec: '6.x'
+
+      - name: Compute version (Mainline/TBD)
+        id: gv
+        uses: gittools/actions/gitversion/execute@v4.1.0
+        with:
+          overrideConfig: |
+            workflow=TrunkBased/preview1
+
+      - name: Display computed version
+        run: echo "Computed version is ${{ steps.gv.outputs.SemVer }}"
