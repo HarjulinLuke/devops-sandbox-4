@@ -24,10 +24,7 @@ jobs:
         uses: gittools/actions/gitversion/command@v4.1.0
         with:
           arguments: |
-            /overrideconfig workflow=TrunkBased/preview1 
-            /output buildserver 
-            /showvariable SemVer 
-            /showvariable MajorMinorPatch
+            /overrideconfig workflow=TrunkBased/preview1 /output buildserver /showvariable SemVer /showvariable MajorMinorPatch
 
       - name: Create tag if missing
         shell: pwsh
