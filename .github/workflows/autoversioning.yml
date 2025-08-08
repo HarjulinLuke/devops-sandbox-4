@@ -1,0 +1,36 @@
+name: Auto Versioning
+description: Automatically create a version tag on the main branch using GitVersion.
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v4.1.0
+        with:
+          versionSpec: '5.x'
+
+      - name: Compute version (Mainline/TBD)
+        id: gv
+        uses: gittools/actions/gitversion/execute@v4.1.0
+        with:
+          overrideConfig: |
+            workflow=TrunkBased/preview1
+
+      - name: Create tag if missing
+        shell: pwsh
+        run: |
+          git fetch --tags --force
+          $tag = "v${{ steps.gv.outputs.semVer }}"
+          if (git tag --list $tag) { echo "Tag $tag exists"; exit 0 }
+          git tag -a $tag -m "Release $tag"
+          git push origin $tag
