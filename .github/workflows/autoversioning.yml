@@ -21,13 +21,10 @@ jobs:
 
       - name: Compute version (Mainline/TBD)
         id: gv
-        uses: gittools/actions/gitversion/command@v4.1.0
+        uses: gittools/actions/gitversion/execute@v4.1.0
         with:
-          arguments: |
-            /overrideconfig workflow=TrunkBased/preview1 
-            /output buildserver 
-            /showvariable SemVer 
-            /showvariable MajorMinorPatch
+          overrideConfig: |
+            workflow=TrunkBased/preview1
 
       - name: Create tag if missing
         shell: pwsh
@@ -35,7 +32,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           git fetch --tags --force
-          $tag = "v${{ env.GitVersion_semVer }}"
+          $tag = "v${{ steps.gv.outputs.semVer }}"
           if (git tag --list $tag) { echo "Tag $tag exists"; exit 0 }
           git tag -a $tag -m "Release $tag"
           git push origin $tag
