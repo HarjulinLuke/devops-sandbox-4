@@ -23,9 +23,6 @@ jobs:
       - name: Compute version (Mainline/TBD)
         id: gv
         uses: gittools/actions/gitversion/execute@v4.1.0
-        with:
-          overrideConfig: |
-            workflow=TrunkBased/preview1
 
       - name: Display computed version
         run: echo "Computed version is ${{ steps.gv.outputs.SemVer }}"
